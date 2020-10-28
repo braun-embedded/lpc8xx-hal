@@ -420,14 +420,24 @@ where
     T: pins::Trait,
 {
     /// TODO add docs
-    pub fn toggle_direction(&self) {
-        todo!()
+    /// `level`: the level that the pin should be in after toggling. TODO: pull from current state
+    pub fn toggle_direction(&mut self, level: Level) {
+        // TODO actually toggle; right now just changes into input
+
+        // TODO partial copypasta from output; refactor into shared fn
+
+        // This is sound, as we only do a stateless write to a bit that no other
+        // `GpioPin` instance writes to.
+        let gpio = unsafe { &*pac::GPIO::ptr() };
+        let registers = Registers::new(gpio);
+
+        self._direction = direction::Dynamic::switch::<T>(&registers, level);
     }
 
     /// TODO add docs
     /// TODO ensure this can only be called in a valid state?
     pub fn set_high(&mut self) {
-        // TODO copypasta from output; refactor into shared fn
+        // TODO copypasta from Outputs into_input(); refactor into shared fn
 
         // This is sound, as we only do a stateless write to a bit that no other
         // `GpioPin` instance writes to.
@@ -733,25 +743,16 @@ pub mod direction {
     pub struct Dynamic(());
 
     impl Direction for Dynamic {
-        // TODO copypasta from output; refactor into shared fn
+        // TODO copypasta mix from input and output; refactor into shared fn
         type SwitchArg = Level;
 
+        // note: switches into input!
         fn switch<T: pins::Trait>(
             registers: &Registers,
-            initial: Level,
+            initial: Level, // TODO rm this
         ) -> Self {
-            // First set the output level, before we switch the mode.
-            match initial {
-                Level::High => super::set_high::<T>(registers),
-                Level::Low => super::set_low::<T>(registers),
-            }
-
-            // Now that the output level is configured, we can safely switch to
-            // output mode, without risking an undesired signal between now and
-            // the first call to `set_high`/`set_low`.
-            registers.dirset[T::PORT]
-                .write(|w| unsafe { w.dirsetp().bits(T::MASK) });
-
+            registers.dirclr[T::PORT]
+                .write(|w| unsafe { w.dirclrp().bits(T::MASK) });
             Self(())
         }
     }
