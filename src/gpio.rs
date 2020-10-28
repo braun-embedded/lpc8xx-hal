@@ -419,11 +419,9 @@ impl<T> GpioPin<T, direction::Dynamic>
 where
     T: pins::Trait,
 {
-    /// TODO add docs
-    /// `level`: the level that the pin should be in after toggling. TODO: pull from current state
-    pub fn toggle_direction(&mut self, level: Level) {
-        // TODO actually toggle; right now just changes into input
-
+    /// TODO add detailed docs
+    /// Switch pin direction to input. If the pin is already an onput pin, this does nothing.
+    pub fn switch_to_input(&mut self) {
         // TODO partial copypasta from output; refactor into shared fn
 
         // This is sound, as we only do a stateless write to a bit that no other
@@ -436,10 +434,12 @@ where
             .write(|w| unsafe { w.dirclrp().bits(T::MASK) });
     }
 
+    // TODO add switch_to_output()
+
     /// TODO add docs
     /// TODO ensure this can only be called in a valid state?
     pub fn set_high(&mut self) {
-        // TODO copypasta from Outputs into_input(); refactor into shared fn
+        // TODO copypasta from Outputs set_high(); refactor into shared fn
 
         // This is sound, as we only do a stateless write to a bit that no other
         // `GpioPin` instance writes to.
@@ -742,7 +742,9 @@ pub mod direction {
     /// the documentation there to see how this type is used.
     ///
     /// [`GpioPin`]: ../struct.GpioPin.html
-    pub struct Dynamic(());
+    pub struct Dynamic {
+        is_output: bool,
+    }
 
     impl Direction for Dynamic {
         // TODO copypasta mix from input and output; refactor into shared fn
@@ -753,9 +755,13 @@ pub mod direction {
             registers: &Registers,
             initial: Level,
         ) -> Self {
+            let mut is_output = false;
             // First set the output level, before we switch the mode.
             match initial {
-                Level::High => super::set_high::<T>(registers),
+                Level::High => {
+                    super::set_high::<T>(registers);
+                    is_output = true;
+                }
                 Level::Low => super::set_low::<T>(registers),
             }
 
@@ -765,7 +771,7 @@ pub mod direction {
             registers.dirset[T::PORT]
                 .write(|w| unsafe { w.dirsetp().bits(T::MASK) });
 
-            Self(())
+            Self { is_output }
         }
     }
 }
