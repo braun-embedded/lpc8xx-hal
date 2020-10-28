@@ -431,7 +431,9 @@ where
         let gpio = unsafe { &*pac::GPIO::ptr() };
         let registers = Registers::new(gpio);
 
-        self._direction = direction::Dynamic::switch::<T>(&registers, level);
+        // switch_to_input
+        registers.dirclr[T::PORT]
+            .write(|w| unsafe { w.dirclrp().bits(T::MASK) });
     }
 
     /// TODO add docs
@@ -746,13 +748,23 @@ pub mod direction {
         // TODO copypasta mix from input and output; refactor into shared fn
         type SwitchArg = Level;
 
-        // note: switches into input!
+        // TODO copypasta from output; refactor into shared fn
         fn switch<T: pins::Trait>(
             registers: &Registers,
-            initial: Level, // TODO rm this
+            initial: Level,
         ) -> Self {
-            registers.dirclr[T::PORT]
-                .write(|w| unsafe { w.dirclrp().bits(T::MASK) });
+            // First set the output level, before we switch the mode.
+            match initial {
+                Level::High => super::set_high::<T>(registers),
+                Level::Low => super::set_low::<T>(registers),
+            }
+
+            // Now that the output level is configured, we can safely switch to
+            // output mode, without risking an undesired signal between now and
+            // the first call to `set_high`/`set_low`.
+            registers.dirset[T::PORT]
+                .write(|w| unsafe { w.dirsetp().bits(T::MASK) });
+
             Self(())
         }
     }
