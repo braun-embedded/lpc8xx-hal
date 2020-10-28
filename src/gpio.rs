@@ -415,6 +415,33 @@ where
     }
 }
 
+impl<T> GpioPin<T, direction::Dynamic>
+where
+    T: pins::Trait,
+{
+    /// TODO add docs
+    pub fn toggle_direction(&self) {
+        todo!()
+    }
+}
+
+impl<T> OutputPin for GpioPin<T, direction::Dynamic>
+where
+    T: pins::Trait,
+{
+    type Error = Void;
+
+    fn set_high(&mut self) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn set_low(&mut self) -> Result<(), Self::Error> {
+        todo!()
+    }
+}
+
+// TODO add impls for InputPin (and others?) for dynamic
+
 impl<T> InputPin for GpioPin<T, direction::Input>
 where
     T: pins::Trait,
@@ -660,6 +687,39 @@ pub mod direction {
     pub struct Output(());
 
     impl Direction for Output {
+        type SwitchArg = Level;
+
+        fn switch<T: pins::Trait>(
+            registers: &Registers,
+            initial: Level,
+        ) -> Self {
+            // First set the output level, before we switch the mode.
+            match initial {
+                Level::High => super::set_high::<T>(registers),
+                Level::Low => super::set_low::<T>(registers),
+            }
+
+            // Now that the output level is configured, we can safely switch to
+            // output mode, without risking an undesired signal between now and
+            // the first call to `set_high`/`set_low`.
+            registers.dirset[T::PORT]
+                .write(|w| unsafe { w.dirsetp().bits(T::MASK) });
+
+            Self(())
+        }
+    }
+
+    /// Marks a GPIO pin as being run-time configurable for in/output
+    /// Initial direction is Output
+    ///
+    /// This type is used as a type parameter of [`GpioPin`]. Please refer to
+    /// the documentation there to see how this type is used.
+    ///
+    /// [`GpioPin`]: ../struct.GpioPin.html
+    pub struct Dynamic(());
+
+    impl Direction for Dynamic {
+        // TODO copypasta from output; refactor into shared fn
         type SwitchArg = Level;
 
         fn switch<T: pins::Trait>(

@@ -286,6 +286,15 @@ where
         GpioPin::new(token, initial)
     }
 
+    /// TODO add docs
+    pub fn into_dynamic_pin(
+        self,
+        token: Token<T, init_state::Enabled>,
+        initial: Level,
+    ) -> GpioPin<T, direction::Dynamic> {
+        GpioPin::new(token, initial)
+    }
+
     /// Transition pin to SWM mode
     ///
     /// This method is only available while the pin is in the unused state. Code
