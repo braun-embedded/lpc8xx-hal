@@ -423,6 +423,19 @@ where
     pub fn toggle_direction(&self) {
         todo!()
     }
+
+    /// TODO add docs
+    /// TODO ensure this can only be called in a valid state?
+    pub fn set_high(&mut self) {
+        // TODO copypasta from output; refactor into shared fn
+
+        // This is sound, as we only do a stateless write to a bit that no other
+        // `GpioPin` instance writes to.
+        let gpio = unsafe { &*pac::GPIO::ptr() };
+        let registers = Registers::new(gpio);
+
+        set_high::<T>(&registers);
+    }
 }
 
 impl<T> OutputPin for GpioPin<T, direction::Dynamic>
@@ -432,7 +445,8 @@ where
     type Error = Void;
 
     fn set_high(&mut self) -> Result<(), Self::Error> {
-        todo!()
+        // Call the inherent method defined above.
+        Ok(self.set_high())
     }
 
     fn set_low(&mut self) -> Result<(), Self::Error> {
