@@ -420,10 +420,12 @@ where
     T: pins::Trait,
 {
     /// TODO add detailed docs
-    /// Switch pin direction to input. If the pin is already an onput pin, this does nothing.
+    /// Switch pin direction to input. If the pin is already an input pin, this does nothing.
     pub fn switch_to_input(&mut self) {
-        // TODO partial copypasta from output; refactor into shared fn
+        // TODO figure out a way to check is_output; return straight away if false
+        // TODO code is copypasta from output and Input::switch(); refactor into shared fn
 
+        // TODO is this still sound? (applies to switch_to_output() too)
         // This is sound, as we only do a stateless write to a bit that no other
         // `GpioPin` instance writes to.
         let gpio = unsafe { &*pac::GPIO::ptr() };
@@ -434,19 +436,56 @@ where
             .write(|w| unsafe { w.dirclrp().bits(T::MASK) });
     }
 
-    // TODO add switch_to_output()
-
-    /// TODO add docs
-    /// TODO ensure this can only be called in a valid state?
-    pub fn set_high(&mut self) {
-        // TODO copypasta from Outputs set_high(); refactor into shared fn
+    /// TODO add detailed docs
+    /// Switch pin direction to output with output level set to `level`.
+    /// If the pin is already an output pin, this does nothing.
+    pub fn switch_to_output(&mut self, level: Level) {
+        // TODO figure out a way to check is_output; return straight away if false
+        // TODO code is copypasta from output and Output::switch(); refactor into shared fn
 
         // This is sound, as we only do a stateless write to a bit that no other
         // `GpioPin` instance writes to.
         let gpio = unsafe { &*pac::GPIO::ptr() };
         let registers = Registers::new(gpio);
 
+        // First set the output level, before we switch the mode.
+        match level {
+            Level::High => self.set_high(),
+            Level::Low => self.set_low(),
+        }
+
+        // Now that the output level is configured, we can safely switch to
+        // output mode, without risking an undesired signal between now and
+        // the first call to `set_high`/`set_low`.
+        registers.dirset[T::PORT]
+            .write(|w| unsafe { w.dirsetp().bits(T::MASK) });
+    }
+
+    /// TODO add docs
+    /// TODO ensure this can only be called in a valid state?
+    pub fn set_high(&mut self) {
+        // TODO copypasta from Outputs set_high(); refactor into shared fn
+
+        // TODO still sound?
+        // This is sound, as we only do a stateless write to a bit that no other
+        // `GpioPin` instance writes to.
+        let gpio = unsafe { &*pac::GPIO::ptr() };
+        let registers = Registers::new(gpio);
+
         set_high::<T>(&registers);
+    }
+
+    /// TODO add docs
+    /// TODO ensure this can only be called in a valid state?
+    pub fn set_low(&mut self) {
+        // TODO copypasta from Outputs set_low(); refactor into shared fn
+
+        // This is sound, as we only do a stateless write to a bit that no other
+        // `GpioPin` instance writes to.
+        let gpio = unsafe { &*pac::GPIO::ptr() };
+        let registers = Registers::new(gpio);
+
+        set_low::<T>(&registers);
     }
 }
 
@@ -462,7 +501,8 @@ where
     }
 
     fn set_low(&mut self) -> Result<(), Self::Error> {
-        todo!()
+        // Call the inherent method defined above.
+        Ok(self.set_low())
     }
 }
 
