@@ -487,6 +487,54 @@ where
 
         set_low::<T>(&registers);
     }
+
+    /// Indicates whether the pin output is currently set to HIGH
+    ///
+    /// TODO add detailed docs
+    pub fn is_set_high(&self) -> bool {
+        // TODO check pin direction first! i.e. only read if pin is in Output mode
+
+        // TODO this is copypasta from Output s impl, unify?
+        // This is sound, as we only read a bit from a register.
+        let gpio = unsafe { &*pac::GPIO::ptr() };
+        let registers = Registers::new(gpio);
+
+        registers.pin[T::PORT].read().port().bits() & T::MASK == T::MASK
+    }
+
+    /// Indicates whether the pin output is currently set to LOW
+    ///
+    /// TODO add detailed docs
+    pub fn is_set_low(&self) -> bool {
+        // TODO check pin direction first! i.e. only read if pin is in Output mode
+
+        !self.is_set_high()
+    }
+
+    /// Indicates wether the signal *read at* the pin input is HIGH
+    ///
+    /// TODO add detailed docs
+    pub fn is_high(&self) -> bool {
+        // TODO check pin direction first! i.e. only read if pin is in Input mode
+        // TODO this is copypasta from Input s impl, unify?
+
+        // This is sound, as we only do a stateless write to a bit that no other
+        // `GpioPin` instance writes to.
+        let gpio = unsafe { &*pac::GPIO::ptr() };
+        let registers = Registers::new(gpio);
+
+        registers.pin[T::PORT].read().port().bits() & T::MASK == T::MASK
+    }
+
+    /// Indicates wether the pin input is LOW
+    ///
+    /// TODO add detailed docs
+    pub fn is_low(&self) -> bool {
+        // TODO check pin direction first! i.e. only read if pin is in Input mode
+        // TODO this is copypasta from Input s impl, unify?
+
+        !self.is_high()
+    }
 }
 
 impl<T> OutputPin for GpioPin<T, direction::Dynamic>
@@ -506,7 +554,37 @@ where
     }
 }
 
-// TODO add impls for InputPin (and others?) for dynamic
+impl<T> StatefulOutputPin for GpioPin<T, direction::Dynamic>
+where
+    T: pins::Trait,
+{
+    fn is_set_high(&self) -> Result<bool, Self::Error> {
+        // Call the inherent method defined above.
+        Ok(self.is_set_high())
+    }
+
+    fn is_set_low(&self) -> Result<bool, Self::Error> {
+        // Call the inherent method defined above.
+        Ok(self.is_set_low())
+    }
+}
+
+impl<T> InputPin for GpioPin<T, direction::Dynamic>
+where
+    T: pins::Trait,
+{
+    type Error = Void;
+
+    fn is_high(&self) -> Result<bool, Self::Error> {
+        // Call the inherent method defined above.
+        Ok(self.is_high())
+    }
+
+    fn is_low(&self) -> Result<bool, Self::Error> {
+        // Call the inherent method defined above.
+        Ok(self.is_low())
+    }
+}
 
 impl<T> InputPin for GpioPin<T, direction::Input>
 where
