@@ -422,7 +422,10 @@ where
     /// TODO add detailed docs
     /// Switch pin direction to input. If the pin is already an input pin, this does nothing.
     pub fn switch_to_input(&mut self) {
-        // TODO figure out a way to check is_output; return straight away if false
+        if self._direction.is_output == false {
+            return;
+        }
+
         // TODO code is copypasta from output and Input::switch(); refactor into shared fn
 
         // TODO is this still sound? (applies to switch_to_output() too)
@@ -431,16 +434,21 @@ where
         let gpio = unsafe { &*pac::GPIO::ptr() };
         let registers = Registers::new(gpio);
 
-        // switch_to_input
+        // switch direction
         registers.dirclr[T::PORT]
             .write(|w| unsafe { w.dirclrp().bits(T::MASK) });
+
+        self._direction.is_output = false;
     }
 
     /// TODO add detailed docs
     /// Switch pin direction to output with output level set to `level`.
     /// If the pin is already an output pin, this does nothing.
     pub fn switch_to_output(&mut self, level: Level) {
-        // TODO figure out a way to check is_output; return straight away if false
+        if self._direction.is_output {
+            return;
+        }
+
         // TODO code is copypasta from output and Output::switch(); refactor into shared fn
 
         // This is sound, as we only do a stateless write to a bit that no other
@@ -459,11 +467,16 @@ where
         // the first call to `set_high`/`set_low`.
         registers.dirset[T::PORT]
             .write(|w| unsafe { w.dirsetp().bits(T::MASK) });
+
+        self._direction.is_output = true;
     }
 
     /// TODO add docs
-    /// TODO ensure this can only be called in a valid state?
     pub fn set_high(&mut self) {
+        if self._direction.is_output == false {
+            return;
+        }
+
         // TODO copypasta from Outputs set_high(); refactor into shared fn
 
         // TODO still sound?
@@ -476,8 +489,11 @@ where
     }
 
     /// TODO add docs
-    /// TODO ensure this can only be called in a valid state?
     pub fn set_low(&mut self) {
+        if self._direction.is_output == false {
+            return;
+        }
+
         // TODO copypasta from Outputs set_low(); refactor into shared fn
 
         // This is sound, as we only do a stateless write to a bit that no other
@@ -491,8 +507,11 @@ where
     /// Indicates whether the pin output is currently set to HIGH
     ///
     /// TODO add detailed docs
+    /// always returns false if current pin direction is Input
     pub fn is_set_high(&self) -> bool {
-        // TODO check pin direction first! i.e. only read if pin is in Output mode
+        if self._direction.is_output == false {
+            return false;
+        }
 
         // TODO this is copypasta from Output s impl, unify?
         // This is sound, as we only read a bit from a register.
@@ -504,9 +523,11 @@ where
 
     /// Indicates whether the pin output is currently set to LOW
     ///
-    /// TODO add detailed docs
+    /// always returns false if current pin direction is Input
     pub fn is_set_low(&self) -> bool {
-        // TODO check pin direction first! i.e. only read if pin is in Output mode
+        if self._direction.is_output == false {
+            return false;
+        }
 
         !self.is_set_high()
     }
@@ -514,8 +535,12 @@ where
     /// Indicates wether the signal *read at* the pin input is HIGH
     ///
     /// TODO add detailed docs
+    /// always returns false if current pin direction is Output
     pub fn is_high(&self) -> bool {
-        // TODO check pin direction first! i.e. only read if pin is in Input mode
+        if self._direction.is_output {
+            return false;
+        }
+
         // TODO this is copypasta from Input s impl, unify?
 
         // This is sound, as we only do a stateless write to a bit that no other
@@ -529,9 +554,11 @@ where
     /// Indicates wether the pin input is LOW
     ///
     /// TODO add detailed docs
+    /// always returns false if current pin direction is Output
     pub fn is_low(&self) -> bool {
-        // TODO check pin direction first! i.e. only read if pin is in Input mode
-        // TODO this is copypasta from Input s impl, unify?
+        if self._direction.is_output {
+            return false;
+        }
 
         !self.is_high()
     }
@@ -861,7 +888,7 @@ pub mod direction {
     ///
     /// [`GpioPin`]: ../struct.GpioPin.html
     pub struct Dynamic {
-        is_output: bool,
+        pub(super) is_output: bool,
     }
 
     impl Direction for Dynamic {
