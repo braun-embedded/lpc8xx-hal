@@ -67,7 +67,7 @@ use crate::pac::gpio::{
     PIN0 as PIN, SET0 as SET,
 };
 
-use self::direction::Direction;
+use self::direction::{Direction, DynamicPinErr};
 
 /// Interface to the GPIO peripheral
 ///
@@ -568,16 +568,30 @@ impl<T> OutputPin for GpioPin<T, direction::Dynamic>
 where
     T: pins::Trait,
 {
-    type Error = Void;
+    type Error = DynamicPinErr;
 
     fn set_high(&mut self) -> Result<(), Self::Error> {
-        // Call the inherent method defined above.
-        Ok(self.set_high())
+        // NOTE: this check is kind of redundant but since both `set_high()`s are public I
+        // didn't want to either leave it out of `self.set_high()` or return an OK here
+        // when there's really an error
+        // (applies to all Dynamic Pin impls)
+        match self._direction.is_output {
+            true => {
+                // Call the inherent method defined above.
+                Ok(self.set_high())
+            }
+            false => Err(Self::Error::WrongDirection),
+        }
     }
 
     fn set_low(&mut self) -> Result<(), Self::Error> {
-        // Call the inherent method defined above.
-        Ok(self.set_low())
+        match self._direction.is_output {
+            true => {
+                // Call the inherent method defined above.
+                Ok(self.set_low())
+            }
+            false => Err(Self::Error::WrongDirection),
+        }
     }
 }
 
@@ -586,13 +600,23 @@ where
     T: pins::Trait,
 {
     fn is_set_high(&self) -> Result<bool, Self::Error> {
-        // Call the inherent method defined above.
-        Ok(self.is_set_high())
+        match self._direction.is_output {
+            true => {
+                // Call the inherent method defined above.
+                Ok(self.is_set_high())
+            }
+            false => Err(Self::Error::WrongDirection),
+        }
     }
 
     fn is_set_low(&self) -> Result<bool, Self::Error> {
-        // Call the inherent method defined above.
-        Ok(self.is_set_low())
+        match self._direction.is_output {
+            true => {
+                // Call the inherent method defined above.
+                Ok(self.is_set_low())
+            }
+            false => Err(Self::Error::WrongDirection),
+        }
     }
 }
 
@@ -600,16 +624,26 @@ impl<T> InputPin for GpioPin<T, direction::Dynamic>
 where
     T: pins::Trait,
 {
-    type Error = Void;
+    type Error = DynamicPinErr;
 
     fn is_high(&self) -> Result<bool, Self::Error> {
-        // Call the inherent method defined above.
-        Ok(self.is_high())
+        match self._direction.is_output {
+            true => Err(Self::Error::WrongDirection),
+            false => {
+                // Call the inherent method defined above.
+                Ok(self.is_high())
+            }
+        }
     }
 
     fn is_low(&self) -> Result<bool, Self::Error> {
-        // Call the inherent method defined above.
-        Ok(self.is_low())
+        match self._direction.is_output {
+            true => Err(Self::Error::WrongDirection),
+            false => {
+                // Call the inherent method defined above.
+                Ok(self.is_low())
+            }
+        }
     }
 }
 
@@ -889,6 +923,13 @@ pub mod direction {
     /// [`GpioPin`]: ../struct.GpioPin.html
     pub struct Dynamic {
         pub(super) is_output: bool,
+    }
+
+    /// TODO add docs
+    #[derive(Copy, Clone)]
+    pub enum DynamicPinErr {
+        /// you called a function that is not applicable to the pin's current direction
+        WrongDirection,
     }
 
     impl Direction for Dynamic {
