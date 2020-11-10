@@ -419,6 +419,16 @@ impl<T> GpioPin<T, direction::Dynamic>
 where
     T: pins::Trait,
 {
+    /// Tell us whether this pin's direction is cuirrently set to Output.
+    pub fn direction_is_output(&self) -> bool {
+        return self._direction.is_output;
+    }
+
+    /// Tell us whether this pin's direction is cuirrently set to Input.
+    pub fn direction_is_input(&self) -> bool {
+        return !self._direction.is_output;
+    }
+
     /// TODO add detailed docs
     /// Switch pin direction to input. If the pin is already an input pin, this does nothing.
     pub fn switch_to_input(&mut self) {
@@ -443,8 +453,15 @@ where
 
     /// TODO add detailed docs
     /// Switch pin direction to output with output level set to `level`.
-    /// If the pin is already an output pin, this does nothing.
+    /// If the pin is already an output pin, this function only switches its level to `level`.
     pub fn switch_to_output(&mut self, level: Level) {
+        // First set the output level, before we switch the mode.
+        match level {
+            Level::High => self.set_high(),
+            Level::Low => self.set_low(),
+        }
+
+        // we are already in output, nothing else to do
         if self._direction.is_output {
             return;
         }
@@ -456,12 +473,6 @@ where
         let gpio = unsafe { &*pac::GPIO::ptr() };
         let registers = Registers::new(gpio);
 
-        // First set the output level, before we switch the mode.
-        match level {
-            Level::High => self.set_high(),
-            Level::Low => self.set_low(),
-        }
-
         // Now that the output level is configured, we can safely switch to
         // output mode, without risking an undesired signal between now and
         // the first call to `set_high`/`set_low`.
@@ -471,12 +482,10 @@ where
         self._direction.is_output = true;
     }
 
-    /// TODO add docs
+    /// Set the pin level to High.
+    /// Note that this will be executed regardless of the current pin direction.
+    /// This enables you to set the initial pin level *before* switching to output
     pub fn set_high(&mut self) {
-        if self._direction.is_output == false {
-            return;
-        }
-
         // TODO copypasta from Outputs set_high(); refactor into shared fn
 
         // TODO still sound?
@@ -488,12 +497,10 @@ where
         set_high::<T>(&registers);
     }
 
-    /// TODO add docs
+    /// Set the pin level to Low.
+    /// Note that this will be executed regardless of the current pin direction.
+    /// This enables you to set the initial pin level *before* switching to output
     pub fn set_low(&mut self) {
-        if self._direction.is_output == false {
-            return;
-        }
-
         // TODO copypasta from Outputs set_low(); refactor into shared fn
 
         // This is sound, as we only do a stateless write to a bit that no other
