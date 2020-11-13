@@ -225,7 +225,6 @@ where
         // Since all other instances of `GpioPin` are doing the same, there are
         // no race conditions.
         let gpio = unsafe { &*pac::GPIO::ptr() };
-
         let registers = Registers::new(gpio);
         let direction = D::switch::<T>(&registers, arg);
 
@@ -503,7 +502,6 @@ where
     ///
     /// TODO add detailed docs
     pub fn is_high(&self) -> bool {
-        // TODO this is copypasta from Output s impl, unify?
         // This is sound, as we only read a bit from a register.
         let gpio = unsafe { &*pac::GPIO::ptr() };
         let registers = Registers::new(gpio);
@@ -899,7 +897,7 @@ pub mod direction {
         pub(super) is_output: bool,
     }
 
-    /// TODO add docs
+    /// Error that can be thrown by operations on a Dynamic pin
     #[derive(Copy, Clone)]
     pub enum DynamicPinErr {
         /// you called a function that is not applicable to the pin's current direction
