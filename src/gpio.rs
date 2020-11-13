@@ -429,25 +429,19 @@ where
         return !self._direction.is_output;
     }
 
-    /// TODO add detailed docs
     /// Switch pin direction to input. If the pin is already an input pin, this does nothing.
     pub fn switch_to_input(&mut self) {
         if self._direction.is_output == false {
             return;
         }
 
-        // TODO code is copypasta from output and Input::switch(); refactor into shared fn
-
-        // TODO is this still sound? (applies to switch_to_output() too)
         // This is sound, as we only do a stateless write to a bit that no other
         // `GpioPin` instance writes to.
         let gpio = unsafe { &*pac::GPIO::ptr() };
         let registers = Registers::new(gpio);
 
         // switch direction
-        registers.dirclr[T::PORT]
-            .write(|w| unsafe { w.dirclrp().bits(T::MASK) });
-
+        set_direction_input::<T>(&registers);
         self._direction.is_output = false;
     }
 
@@ -481,9 +475,6 @@ where
     /// Note that this will be executed regardless of the current pin direction.
     /// This enables you to set the initial pin level *before* switching to output
     pub fn set_high(&mut self) {
-        // TODO copypasta from Outputs set_high(); refactor into shared fn
-
-        // TODO still sound?
         // This is sound, as we only do a stateless write to a bit that no other
         // `GpioPin` instance writes to.
         let gpio = unsafe { &*pac::GPIO::ptr() };
@@ -496,8 +487,6 @@ where
     /// Note that this will be executed regardless of the current pin direction.
     /// This enables you to set the initial pin level *before* switching to output
     pub fn set_low(&mut self) {
-        // TODO copypasta from Outputs set_low(); refactor into shared fn
-
         // This is sound, as we only do a stateless write to a bit that no other
         // `GpioPin` instance writes to.
         let gpio = unsafe { &*pac::GPIO::ptr() };
@@ -790,10 +779,17 @@ fn set_low<T: pins::Trait>(registers: &Registers) {
 }
 
 // For internal use only.
-// Use the direction helpers of GpioPin<T, direction::Dynamic> and GpioPin<T, direction::Output>
+// Use the direction helpers of GpioPin<T, direction::Output> and GpioPin<T, direction::Dynamic>
 // instead.
 fn set_direction_output<T: pins::Trait>(registers: &Registers) {
     registers.dirset[T::PORT].write(|w| unsafe { w.dirsetp().bits(T::MASK) });
+}
+
+// For internal use only.
+// Use the direction helpers of GpioPin<T, direction::Input> and GpioPin<T, direction::Dynamic>
+// instead.
+fn set_direction_input<T: pins::Trait>(registers: &Registers) {
+    registers.dirclr[T::PORT].write(|w| unsafe { w.dirclrp().bits(T::MASK) });
 }
 
 /// This is an internal type that should be of no concern to users of this crate
@@ -886,8 +882,7 @@ pub mod direction {
             registers: &Registers,
             _: Self::SwitchArg,
         ) -> Self {
-            registers.dirclr[T::PORT]
-                .write(|w| unsafe { w.dirclrp().bits(T::MASK) });
+            super::set_direction_input::<T>(registers);
             Self(())
         }
     }
