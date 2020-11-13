@@ -54,6 +54,8 @@ macro_rules! pins {
             #[allow(non_camel_case_types)]
             pub struct $type(());
 
+            // note to self: turn constants into getters/setters so I can change the values at runtime
+            // create new dynamictoken that takes ownership of strongly typed one and creates new dyn
             impl Trait for $type {
                 const PORT: usize = $port;
                 const ID  : u8    = $id;
