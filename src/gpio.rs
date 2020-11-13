@@ -451,7 +451,6 @@ where
         self._direction.is_output = false;
     }
 
-    /// TODO add detailed docs
     /// Switch pin direction to output with output level set to `level`.
     /// If the pin is already an output pin, this function only switches its level to `level`.
     pub fn switch_to_output(&mut self, level: Level) {
@@ -466,8 +465,6 @@ where
             return;
         }
 
-        // TODO code is copypasta from output and Output::switch(); refactor into shared fn
-
         // This is sound, as we only do a stateless write to a bit that no other
         // `GpioPin` instance writes to.
         let gpio = unsafe { &*pac::GPIO::ptr() };
@@ -476,9 +473,7 @@ where
         // Now that the output level is configured, we can safely switch to
         // output mode, without risking an undesired signal between now and
         // the first call to `set_high`/`set_low`.
-        registers.dirset[T::PORT]
-            .write(|w| unsafe { w.dirsetp().bits(T::MASK) });
-
+        set_direction_output::<T>(&registers);
         self._direction.is_output = true;
     }
 
@@ -794,6 +789,13 @@ fn set_low<T: pins::Trait>(registers: &Registers) {
     registers.clr[T::PORT].write(|w| unsafe { w.clrp().bits(T::MASK) });
 }
 
+// For internal use only.
+// Use the direction helpers of GpioPin<T, direction::Dynamic> and GpioPin<T, direction::Output>
+// instead.
+fn set_direction_output<T: pins::Trait>(registers: &Registers) {
+    registers.dirset[T::PORT].write(|w| unsafe { w.dirsetp().bits(T::MASK) });
+}
+
 /// This is an internal type that should be of no concern to users of this crate
 pub struct Registers<'gpio> {
     dirset: &'gpio [DIRSET],
@@ -914,8 +916,7 @@ pub mod direction {
             // Now that the output level is configured, we can safely switch to
             // output mode, without risking an undesired signal between now and
             // the first call to `set_high`/`set_low`.
-            registers.dirset[T::PORT]
-                .write(|w| unsafe { w.dirsetp().bits(T::MASK) });
+            super::set_direction_output::<T>(&registers);
 
             Self(())
         }
@@ -940,29 +941,26 @@ pub mod direction {
     }
 
     impl Direction for Dynamic {
-        // TODO copypasta mix from input and output; refactor into shared fn
         type SwitchArg = Level;
 
-        // TODO copypasta from output; refactor into shared fn
+        /// Currently *always* configures the pin as output initially
+        /// TODO what would be a more sensible default?
         fn switch<T: pins::Trait>(
             registers: &Registers,
             initial: Level,
         ) -> Self {
-            let mut is_output = false;
+            let is_output = true;
+
             // First set the output level, before we switch the mode.
             match initial {
-                Level::High => {
-                    super::set_high::<T>(registers);
-                    is_output = true;
-                }
+                Level::High => super::set_high::<T>(registers),
                 Level::Low => super::set_low::<T>(registers),
             }
 
             // Now that the output level is configured, we can safely switch to
             // output mode, without risking an undesired signal between now and
             // the first call to `set_high`/`set_low`.
-            registers.dirset[T::PORT]
-                .write(|w| unsafe { w.dirsetp().bits(T::MASK) });
+            super::set_direction_output::<T>(registers);
 
             Self { is_output }
         }
