@@ -277,7 +277,7 @@ where
         let gpio = unsafe { &*pac::GPIO::ptr() };
         let registers = Registers::new(gpio);
 
-        registers.pin[T::PORT].read().port().bits() & T::MASK == T::MASK
+        is_high::<T>(&registers)
     }
 
     /// Indicates wether the pin input is LOW
@@ -376,7 +376,7 @@ where
         let gpio = unsafe { &*pac::GPIO::ptr() };
         let registers = Registers::new(gpio);
 
-        registers.pin[T::PORT].read().port().bits() & T::MASK == T::MASK
+        is_high::<T>(&registers)
     }
 
     /// Indicates whether the pin output is currently set to LOW
@@ -508,7 +508,7 @@ where
         let gpio = unsafe { &*pac::GPIO::ptr() };
         let registers = Registers::new(gpio);
 
-        registers.pin[T::PORT].read().port().bits() & T::MASK == T::MASK
+        is_high::<T>(&registers)
     }
 
     /// Indicates whether the voltage at this pin is currently set to LOW
@@ -516,6 +516,7 @@ where
     ///
     /// If it is currently an Output pin, it indicates whether the pin output is set to LOW
     /// If it is currently an Input pin, it indicates wether the pin input is LOW
+    /// TODO add detailed docs
     pub fn is_low(&self) -> bool {
         !self.is_high()
     }
@@ -559,7 +560,7 @@ where
     fn is_set_high(&self) -> Result<bool, Self::Error> {
         match self._direction.is_output {
             true => {
-                // Call the inherent method defined above.
+                // Re-use level reading function
                 Ok(self.is_high())
             }
             false => Err(Self::Error::WrongDirection),
@@ -569,7 +570,7 @@ where
     fn is_set_low(&self) -> Result<bool, Self::Error> {
         match self._direction.is_output {
             true => {
-                // Call the inherent method defined above.
+                // Re-use level reading function
                 Ok(self.is_low())
             }
             false => Err(Self::Error::WrongDirection),
@@ -742,6 +743,10 @@ fn set_high<T: pins::Trait>(registers: &Registers) {
 
 fn set_low<T: pins::Trait>(registers: &Registers) {
     registers.clr[T::PORT].write(|w| unsafe { w.clrp().bits(T::MASK) });
+}
+
+fn is_high<T: pins::Trait>(registers: &Registers) -> bool {
+    registers.pin[T::PORT].read().port().bits() & T::MASK == T::MASK
 }
 
 // For internal use only.
