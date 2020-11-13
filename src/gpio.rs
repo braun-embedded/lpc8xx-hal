@@ -495,15 +495,14 @@ where
         set_low::<T>(&registers);
     }
 
-    /// Indicates whether the pin output is currently set to HIGH
+    /// Indicates whether the voltage at this pin is currently set to HIGH
+    /// This can be used when the pin is in any direction:
+    ///
+    /// If it is currently an Output pin, it indicates whether the pin output is set to HIGH
+    /// If it is currently an Input pin, it indicates wether the pin input is HIGH
     ///
     /// TODO add detailed docs
-    /// always returns false if current pin direction is Input
-    pub fn is_set_high(&self) -> bool {
-        if self._direction.is_output == false {
-            return false;
-        }
-
+    pub fn is_high(&self) -> bool {
         // TODO this is copypasta from Output s impl, unify?
         // This is sound, as we only read a bit from a register.
         let gpio = unsafe { &*pac::GPIO::ptr() };
@@ -512,45 +511,12 @@ where
         registers.pin[T::PORT].read().port().bits() & T::MASK == T::MASK
     }
 
-    /// Indicates whether the pin output is currently set to LOW
+    /// Indicates whether the voltage at this pin is currently set to LOW
+    /// This can be used when the pin is in any direction:
     ///
-    /// always returns false if current pin direction is Input
-    pub fn is_set_low(&self) -> bool {
-        if self._direction.is_output == false {
-            return false;
-        }
-
-        !self.is_set_high()
-    }
-
-    /// Indicates wether the signal *read at* the pin input is HIGH
-    ///
-    /// TODO add detailed docs
-    /// always returns false if current pin direction is Output
-    pub fn is_high(&self) -> bool {
-        if self._direction.is_output {
-            return false;
-        }
-
-        // TODO this is copypasta from Input s impl, unify?
-
-        // This is sound, as we only do a stateless write to a bit that no other
-        // `GpioPin` instance writes to.
-        let gpio = unsafe { &*pac::GPIO::ptr() };
-        let registers = Registers::new(gpio);
-
-        registers.pin[T::PORT].read().port().bits() & T::MASK == T::MASK
-    }
-
-    /// Indicates wether the pin input is LOW
-    ///
-    /// TODO add detailed docs
-    /// always returns false if current pin direction is Output
+    /// If it is currently an Output pin, it indicates whether the pin output is set to LOW
+    /// If it is currently an Input pin, it indicates wether the pin input is LOW
     pub fn is_low(&self) -> bool {
-        if self._direction.is_output {
-            return false;
-        }
-
         !self.is_high()
     }
 }
@@ -594,7 +560,7 @@ where
         match self._direction.is_output {
             true => {
                 // Call the inherent method defined above.
-                Ok(self.is_set_high())
+                Ok(self.is_high())
             }
             false => Err(Self::Error::WrongDirection),
         }
@@ -604,7 +570,7 @@ where
         match self._direction.is_output {
             true => {
                 // Call the inherent method defined above.
-                Ok(self.is_set_low())
+                Ok(self.is_low())
             }
             false => Err(Self::Error::WrongDirection),
         }
