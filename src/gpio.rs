@@ -319,6 +319,9 @@ where
         }
     }
 
+    // TODO: should a fn into_dynamic(initial_direction: direction)
+    // be added here and in impl<T> GpioPin<T, direction::Input>?
+
     /// Set the pin output to HIGH
     ///
     /// This method is only available, if two conditions are met:
@@ -423,7 +426,7 @@ where
         return self._direction.is_output;
     }
 
-    /// Tell us whether this pin's direction is currently set to Input.
+    /// Tell us whether this pin's direction is cuirrently set to Input.
     pub fn direction_is_input(&self) -> bool {
         return !self._direction.is_output;
     }
@@ -500,7 +503,9 @@ where
     /// If it is currently an Output pin, it indicates whether the pin output is set to HIGH
     /// If it is currently an Input pin, it indicates wether the pin input is HIGH
     ///
-    /// TODO add detailed docs
+    /// This method is only available, if the pin is in the GPIO state.
+    /// See [`Pin::into_dynamic_pin`].
+    /// Unless this condition is met, code trying to call this method will not compile.
     pub fn is_high(&self) -> bool {
         // This is sound, as we only read a bit from a register.
         let gpio = unsafe { &*pac::GPIO::ptr() };
@@ -514,7 +519,10 @@ where
     ///
     /// If it is currently an Output pin, it indicates whether the pin output is set to LOW
     /// If it is currently an Input pin, it indicates wether the pin input is LOW
-    /// TODO add detailed docs
+    ///
+    /// This method is only available, if the pin is in the GPIO state.
+    /// See [`Pin::into_dynamic_pin`].
+    /// Unless this condition is met, code trying to call this method will not compile.
     pub fn is_low(&self) -> bool {
         !self.is_high()
     }
