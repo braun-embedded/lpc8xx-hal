@@ -418,12 +418,12 @@ impl<T> GpioPin<T, direction::Dynamic>
 where
     T: pins::Trait,
 {
-    /// Tell us whether this pin's direction is cuirrently set to Output.
+    /// Tell us whether this pin's direction is currently set to Output.
     pub fn direction_is_output(&self) -> bool {
         return self._direction.is_output;
     }
 
-    /// Tell us whether this pin's direction is cuirrently set to Input.
+    /// Tell us whether this pin's direction is currently set to Input.
     pub fn direction_is_input(&self) -> bool {
         return !self._direction.is_output;
     }
