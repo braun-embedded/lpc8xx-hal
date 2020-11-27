@@ -176,6 +176,7 @@ pub struct Pin<T: Trait, S: State> {
 }
 
 /// Marks the current directin of a Dynamic Pin.
+#[derive(Debug, PartialEq)]
 pub enum DynamicPinDirection {
     /// Pin is currently Input
     Input,

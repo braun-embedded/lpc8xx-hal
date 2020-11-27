@@ -423,17 +423,19 @@ where
 {
     /// Tell us whether this pin's direction is currently set to Output.
     pub fn direction_is_output(&self) -> bool {
-        return self._direction.is_output;
+        return self._direction.current_direction
+            == pins::DynamicPinDirection::Output;
     }
 
-    /// Tell us whether this pin's direction is cuirrently set to Input.
+    /// Tell us whether this pin's direction is currently set to Input.
     pub fn direction_is_input(&self) -> bool {
-        return !self._direction.is_output;
+        return !self.direction_is_output();
     }
 
     /// Switch pin direction to input. If the pin is already an input pin, this does nothing.
     pub fn switch_to_input(&mut self) {
-        if self._direction.is_output == false {
+        if self._direction.current_direction == pins::DynamicPinDirection::Input
+        {
             return;
         }
 
@@ -444,7 +446,7 @@ where
 
         // switch direction
         set_direction_input::<T>(&registers);
-        self._direction.is_output = false;
+        self._direction.current_direction = pins::DynamicPinDirection::Input;
     }
 
     /// Switch pin direction to output with output level set to `level`.
@@ -457,7 +459,9 @@ where
         }
 
         // we are already in output, nothing else to do
-        if self._direction.is_output {
+        if self._direction.current_direction
+            == pins::DynamicPinDirection::Output
+        {
             return;
         }
 
@@ -470,7 +474,7 @@ where
         // output mode, without risking an undesired signal between now and
         // the first call to `set_high`/`set_low`.
         set_direction_output::<T>(&registers);
-        self._direction.is_output = true;
+        self._direction.current_direction = pins::DynamicPinDirection::Output;
     }
 
     /// Set the pin level to High.
@@ -539,22 +543,26 @@ where
         // didn't want to either leave it out of `self.set_high()` or return an OK here
         // when there's really an error
         // (applies to all Dynamic Pin impls)
-        match self._direction.is_output {
-            true => {
+        match self._direction.current_direction {
+            pins::DynamicPinDirection::Output => {
                 // Call the inherent method defined above.
                 Ok(self.set_high())
             }
-            false => Err(Self::Error::WrongDirection),
+            pins::DynamicPinDirection::Input => {
+                Err(Self::Error::WrongDirection)
+            }
         }
     }
 
     fn set_low(&mut self) -> Result<(), Self::Error> {
-        match self._direction.is_output {
-            true => {
+        match self._direction.current_direction {
+            pins::DynamicPinDirection::Output => {
                 // Call the inherent method defined above.
                 Ok(self.set_low())
             }
-            false => Err(Self::Error::WrongDirection),
+            pins::DynamicPinDirection::Input => {
+                Err(Self::Error::WrongDirection)
+            }
         }
     }
 }
@@ -564,22 +572,26 @@ where
     T: pins::Trait,
 {
     fn is_set_high(&self) -> Result<bool, Self::Error> {
-        match self._direction.is_output {
-            true => {
+        match self._direction.current_direction {
+            pins::DynamicPinDirection::Output => {
                 // Re-use level reading function
                 Ok(self.is_high())
             }
-            false => Err(Self::Error::WrongDirection),
+            pins::DynamicPinDirection::Input => {
+                Err(Self::Error::WrongDirection)
+            }
         }
     }
 
     fn is_set_low(&self) -> Result<bool, Self::Error> {
-        match self._direction.is_output {
-            true => {
+        match self._direction.current_direction {
+            pins::DynamicPinDirection::Output => {
                 // Re-use level reading function
                 Ok(self.is_low())
             }
-            false => Err(Self::Error::WrongDirection),
+            pins::DynamicPinDirection::Input => {
+                Err(Self::Error::WrongDirection)
+            }
         }
     }
 }
@@ -591,9 +603,11 @@ where
     type Error = DynamicPinErr;
 
     fn is_high(&self) -> Result<bool, Self::Error> {
-        match self._direction.is_output {
-            true => Err(Self::Error::WrongDirection),
-            false => {
+        match self._direction.current_direction {
+            pins::DynamicPinDirection::Output => {
+                Err(Self::Error::WrongDirection)
+            }
+            pins::DynamicPinDirection::Input => {
                 // Call the inherent method defined above.
                 Ok(self.is_high())
             }
@@ -601,9 +615,11 @@ where
     }
 
     fn is_low(&self) -> Result<bool, Self::Error> {
-        match self._direction.is_output {
-            true => Err(Self::Error::WrongDirection),
-            false => {
+        match self._direction.current_direction {
+            pins::DynamicPinDirection::Output => {
+                Err(Self::Error::WrongDirection)
+            }
+            pins::DynamicPinDirection::Input => {
                 // Call the inherent method defined above.
                 Ok(self.is_low())
             }
@@ -902,7 +918,7 @@ pub mod direction {
     ///
     /// [`GpioPin`]: ../struct.GpioPin.html
     pub struct Dynamic {
-        pub(super) is_output: bool,
+        pub(super) current_direction: pins::DynamicPinDirection,
     }
 
     /// Error that can be thrown by operations on a Dynamic pin
@@ -920,7 +936,7 @@ pub mod direction {
             registers: &Registers,
             initial: Self::SwitchArg,
         ) -> Self {
-            let (level, direction) = initial;
+            let (level, current_direction) = initial;
 
             // First set the output level, before we switch the mode.
             match level {
@@ -929,17 +945,14 @@ pub mod direction {
             }
 
             // TODO refactor this out, use DynamicPinDirection everywhere
-            let is_output: bool;
-            match direction {
+            match current_direction {
                 pins::DynamicPinDirection::Input => {
-                    is_output = false;
                     // Now that the output level is configured, we can safely switch to
                     // output mode, without risking an undesired signal between now and
                     // the first call to `set_high`/`set_low`.
                     super::set_direction_input::<T>(registers);
                 }
                 pins::DynamicPinDirection::Output => {
-                    is_output = true;
                     // Now that the output level is configured, we can safely switch to
                     // output mode, without risking an undesired signal between now and
                     // the first call to `set_high`/`set_low`.
@@ -947,7 +960,7 @@ pub mod direction {
                 }
             }
 
-            Self { is_output }
+            Self { current_direction }
         }
     }
 }
