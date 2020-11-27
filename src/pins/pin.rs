@@ -329,8 +329,8 @@ where
     /// pin.switch_to_input();
     ///
     /// // in/output pin functions are available while pin has the matching direction
-    /// let is_high = pin.is_high()
-    /// let is_low = pin.is_low()
+    /// let is_high = pin.is_high();
+    /// let is_low = pin.is_low();
     ///
     /// pin.switch_to_output(gpio::Level::Low);
     /// pin.set_high();
