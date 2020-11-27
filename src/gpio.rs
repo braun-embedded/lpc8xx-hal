@@ -259,6 +259,36 @@ where
         }
     }
 
+    /// Set pin direction to dynamic (i.e. changeable at runtime)
+    ///
+    /// This method is only available while the pin is in input mode.
+    ///
+    /// Consumes the pin instance and returns a new instance that is in dynamic
+    /// mode, making the methods to change direction as well as read/set levels
+    /// (depending on the current diection) available.
+    pub fn into_dynamic(
+        self,
+        initial_level: Level,
+        initial_direction: pins::DynamicPinDirection,
+    ) -> GpioPin<T, direction::Dynamic> {
+        // This is sound, as we only do a stateless write to a bit that no other
+        // `GpioPin` instance writes to.
+        let gpio = unsafe { &*pac::GPIO::ptr() };
+        let registers = Registers::new(gpio);
+
+        // only switch initial pin direction if it differs from its current state
+        if initial_direction == pins::DynamicPinDirection::Output {
+            direction::Output::switch::<T>(&registers, initial_level);
+        }
+
+        GpioPin {
+            token: self.token,
+            _direction: direction::Dynamic {
+                current_direction: initial_direction,
+            },
+        }
+    }
+
     /// Indicates wether the pin input is HIGH
     ///
     /// This method is only available, if two conditions are met:
@@ -319,8 +349,34 @@ where
         }
     }
 
-    // TODO: should a fn into_dynamic(initial_direction: direction)
-    // be added here and in impl<T> GpioPin<T, direction::Input>?
+    /// Set pin direction to dynamic (i.e. changeable at runtime)
+    ///
+    /// This method is only available while the pin is in output mode.
+    ///
+    /// Consumes the pin instance and returns a new instance that is in dynamic
+    /// mode, making the methods to change direction as well as read/set levels
+    /// (depending on the current diection) available.
+    pub fn into_dynamic(
+        self,
+        initial_direction: pins::DynamicPinDirection,
+    ) -> GpioPin<T, direction::Dynamic> {
+        // This is sound, as we only do a stateless write to a bit that no other
+        // `GpioPin` instance writes to.
+        let gpio = unsafe { &*pac::GPIO::ptr() };
+        let registers = Registers::new(gpio);
+
+        // only switch initial pin direction if it differs from its current state
+        if initial_direction == pins::DynamicPinDirection::Input {
+            direction::Input::switch::<T>(&registers, ());
+        }
+
+        GpioPin {
+            token: self.token,
+            _direction: direction::Dynamic {
+                current_direction: initial_direction,
+            },
+        }
+    }
 
     /// Set the pin output to HIGH
     ///
