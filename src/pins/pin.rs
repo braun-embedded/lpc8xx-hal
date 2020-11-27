@@ -175,6 +175,15 @@ pub struct Pin<T: Trait, S: State> {
     pub(crate) _state: S,
 }
 
+/// Marks the current directin of a Dynamic Pin.
+pub enum DynamicPinDirection {
+    /// Pin is currently Input
+    Input,
+
+    /// Pin is currently Output
+    Output,
+}
+
 impl<T> Pin<T, state::Unused>
 where
     T: Trait,
@@ -347,10 +356,10 @@ where
     pub fn into_dynamic_pin(
         self,
         token: Token<T, init_state::Enabled>,
-        initial: Level,
+        level: Level,
+        direction: DynamicPinDirection,
     ) -> GpioPin<T, direction::Dynamic> {
-        // TODO: pass an initial direction too!
-        GpioPin::new(token, initial)
+        GpioPin::new(token, (level, direction))
     }
 
     /// Transition pin to SWM mode

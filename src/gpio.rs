@@ -913,26 +913,39 @@ pub mod direction {
     }
 
     impl Direction for Dynamic {
-        type SwitchArg = Level;
+        type SwitchArg = (Level, pins::DynamicPinDirection);
 
         /// Currently *always* configures the pin as output initially
-        /// TODO what would be a more sensible default?
         fn switch<T: pins::Trait>(
             registers: &Registers,
-            initial: Level,
+            initial: Self::SwitchArg,
         ) -> Self {
-            let is_output = true;
+            let (level, direction) = initial;
 
             // First set the output level, before we switch the mode.
-            match initial {
+            match level {
                 Level::High => super::set_high::<T>(registers),
                 Level::Low => super::set_low::<T>(registers),
             }
 
-            // Now that the output level is configured, we can safely switch to
-            // output mode, without risking an undesired signal between now and
-            // the first call to `set_high`/`set_low`.
-            super::set_direction_output::<T>(registers);
+            // TODO refactor this out, use DynamicPinDirection everywhere
+            let is_output: bool;
+            match direction {
+                pins::DynamicPinDirection::Input => {
+                    is_output = false;
+                    // Now that the output level is configured, we can safely switch to
+                    // output mode, without risking an undesired signal between now and
+                    // the first call to `set_high`/`set_low`.
+                    super::set_direction_input::<T>(registers);
+                }
+                pins::DynamicPinDirection::Output => {
+                    is_output = true;
+                    // Now that the output level is configured, we can safely switch to
+                    // output mode, without risking an undesired signal between now and
+                    // the first call to `set_high`/`set_low`.
+                    super::set_direction_output::<T>(registers);
+                }
+            }
 
             Self { is_output }
         }
