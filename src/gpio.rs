@@ -276,16 +276,13 @@ where
         let gpio = unsafe { &*pac::GPIO::ptr() };
         let registers = Registers::new(gpio);
 
-        // only switch initial pin direction if it differs from its current state
-        if initial_direction == pins::DynamicPinDirection::Output {
-            direction::Output::switch::<T>(&registers, initial_level);
-        }
-
         GpioPin {
             token: self.token,
-            _direction: direction::Dynamic {
-                current_direction: initial_direction,
-            },
+            // always switch to ensure initial level and direction are set correctly
+            _direction: direction::Dynamic::switch::<T>(
+                &registers,
+                (initial_level, initial_direction),
+            ),
         }
     }
 
@@ -358,6 +355,7 @@ where
     /// (depending on the current diection) available.
     pub fn into_dynamic(
         self,
+        initial_level: Level,
         initial_direction: pins::DynamicPinDirection,
     ) -> GpioPin<T, direction::Dynamic> {
         // This is sound, as we only do a stateless write to a bit that no other
@@ -365,16 +363,13 @@ where
         let gpio = unsafe { &*pac::GPIO::ptr() };
         let registers = Registers::new(gpio);
 
-        // only switch initial pin direction if it differs from its current state
-        if initial_direction == pins::DynamicPinDirection::Input {
-            direction::Input::switch::<T>(&registers, ());
-        }
-
         GpioPin {
             token: self.token,
-            _direction: direction::Dynamic {
-                current_direction: initial_direction,
-            },
+            // always switch to ensure initial level and direction are set correctly
+            _direction: direction::Dynamic::switch::<T>(
+                &registers,
+                (initial_level, initial_direction),
+            ),
         }
     }
 
@@ -987,7 +982,6 @@ pub mod direction {
     impl Direction for Dynamic {
         type SwitchArg = (Level, pins::DynamicPinDirection);
 
-        /// Currently *always* configures the pin as output initially
         fn switch<T: pins::Trait>(
             registers: &Registers,
             initial: Self::SwitchArg,

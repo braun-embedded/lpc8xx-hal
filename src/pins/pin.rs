@@ -176,7 +176,7 @@ pub struct Pin<T: Trait, S: State> {
 }
 
 /// Marks the current directin of a Dynamic Pin.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum DynamicPinDirection {
     /// Pin is currently Input
     Input,
@@ -317,6 +317,7 @@ where
     ///     prelude::*,
     ///     Peripherals,
     ///     gpio,
+    ///     pins
     /// };
     ///
     /// let p = Peripherals::take().unwrap();
@@ -333,6 +334,7 @@ where
     /// let mut pin = p.pins.pio0_12.into_dynamic_pin(
     ///     gpio.tokens.pio0_12,
     ///     gpio::Level::Low,
+    ///     pins::DynamicPinDirection::Input,
     /// );
     ///
     /// // Direction can now be switched
